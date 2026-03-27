@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sso-deployment
+  labels:
+    env: prod
+    project: sso
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sso
+
+  template:
+    metadata:
+      labels:
+        app: sso
+
+    spec: 
+      containers:
+        - name: sso
+          image: nginx
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 10m
+              memory: 10Mi
+            limits:
+              cpu: 10m
+              memory: 10Mi
