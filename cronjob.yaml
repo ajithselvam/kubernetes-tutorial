@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cronjob
+
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: cronjob
+              image: busybox
+              imagePullPolicy: IfNotPresent
+              args:
+                - /bin/sh
+                - -c
+                - date; echo from kubernetes
+          restartPolicy: OnFailure
