@@ -1,0 +1,72 @@
+No problem—let’s skip the code and stick to the Google Cloud Console interface. This is often easier because you can pick metrics from a dropdown menu.
+
+Since we deployed Jenkins as a StatefulSet, we will look for "Ready Replicas."
+
+Step 1: Navigate to Alerting
+Log into your Google Cloud Console.
+
+In the search bar at the top, type "Monitoring" and select it.
+
+In the left-hand sidebar, click on Alerting.
+
+Click the + CREATE POLICY button at the top.
+
+Step 2: Select the Metric
+Click on Select a metric.
+
+Uncheck "Active" to see all metrics if necessary.
+
+In the search box, type StatefulSet and navigate to:
+
+Kubernetes Scale > StatefulSet > Ready replicas (kubernetes.io/statefulset/ready_replicas)
+
+Click Apply.
+
+Filter the data: Click + Add Filter.
+
+Label: resource.labels.name
+
+Value: jenkins (This ensures you only monitor Jenkins, not every app in your cluster).
+
+Step 3: Configure the Trigger
+Rolling Window: Set this to 1 minute. (This is how long the system waits to confirm the pods are actually gone).
+
+Condition Type: Threshold.
+
+Threshold Position: Below threshold.
+
+Threshold Value: 1.
+
+This means if "Ready Replicas" is less than 1 (i.e., 0), the alarm will trigger.
+
+Step 4: Set Notifications
+Click Next to go to "Configure notifications."
+
+Click the dropdown under Notification Channels.
+
+If you haven't set one up, click Manage Notification Channels to add your email address, then come back and select it.
+
+Incident Auto-close: Leave this at the default (usually 7 days).
+
+Step 5: Name and Finish
+Give the policy a clear name like Jenkins Instance Down.
+
+Add a brief "Documentation" note if you like, such as: "The Jenkins pod has stopped running. Check GKE workloads immediately."
+
+Click Create Policy.
+
+How to test it manually
+To make sure your phone or email actually buzzes when things break:
+
+Open your terminal and run:
+
+Bash
+kubectl scale statefulset jenkins --replicas=0
+Wait about 2 minutes.
+
+Check the Alerting dashboard in GCP; you should see a red "Incident" open.
+
+Once you've verified it, bring Jenkins back online:
+
+Bash
+kubectl scale statefulset jenkins --replicas=1
