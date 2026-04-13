@@ -27,6 +27,12 @@ spec:
         env:
           - name: JAVA_OPTS
             value: "-Djenkins.install.runSetupWizard=true"
+
+        env:     # donot use in production - for only lab env
+        - name: JAVA_OPTS      # donot use in production - for only lab env
+          value: "-Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=true"    # donot use in production - for only lab env
+
+            
         resources:
           limits:
             memory: "2Gi"
