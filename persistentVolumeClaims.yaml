@@ -1,0 +1,37 @@
+Option 2: Keep the Deployment (Use a Separate PVC)
+If you prefer to stay with a Deployment, you must define the PersistentVolumeClaim as its own object and then reference it in the volumes section of the Deployment.
+
+1. Create the PVC
+YAML
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+2. Update your Deployment
+YAML
+spec:
+  template:
+    spec:
+      containers:
+        - name: jenkins
+          image: jenkins/jenkins:lts
+          volumeMounts:
+            - name: jenkins-home
+              mountPath: /var/jenkins_home
+      volumes: # Define the volume here
+        - name: jenkins-home
+          persistentVolumeClaim:
+            claimName: jenkins-pvc
+Key Takeaways
+Indentation Error: In your original YAML, volumeClaimTemplates was nested inside the containers list. Even in a StatefulSet, it belongs under the main spec.
+
+Environment Variables: You defined JAVA_OPTS twice. In YAML, the second one will overwrite the first. To set multiple options, combine them into one string:
+value: "-Djenkins.install.runSetupWizard=true -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=true"
+
+Stateful Nature: Because Jenkins stores data in /var/jenkins_home, using a StatefulSet prevents data loss and ensures that if the Pod moves to a different node, it carries its disk with it.
