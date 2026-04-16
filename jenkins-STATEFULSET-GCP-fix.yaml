@@ -1,0 +1,73 @@
+# Statefulset
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: jenk
+  namespace: default
+
+spec:
+  serviceName: "jenk"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenk
+
+  template:
+    metadata:
+      labels:
+        app: jenk
+
+    spec:
+      containers:
+        - name: jenk
+          image: jenkins/jenkins:lts
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+            - containerPort: 50000
+          volumeMounts:
+            - name: jenkins-home
+              mountPath: /var/jenkins_home
+
+      initContainers:
+      - name: chmod
+        image: busybox
+        command: ['sh', '-c', 'chmod 777 /var/jenkins_home']
+        volumeMounts:
+          - name: jenkins-home
+            mountPath: /var/jenkins_home        
+
+
+  volumeClaimTemplates:
+  - metadata:
+      name: jenkins-home
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 900Mi
+
+
+
+
+
+--- # SERVICE
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenk
+  namespace: default
+
+spec:
+  type: LoadBalancer
+  selector:
+    app: jenk
+
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: agent
+      port: 50000
+      targetPort: 50000
