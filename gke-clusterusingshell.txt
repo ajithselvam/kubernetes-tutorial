@@ -1,0 +1,94 @@
+how to create a cluster using cloud shell in GCP skills.google lab
+
+If you're using a Google Cloud Skills Boost (formerly Qwiklabs) lab, the most common way to create a cluster from Cloud Shell is with gcloud or kubectl. The exact command depends on whether the lab uses Standard GKE or Autopilot GKE.
+
+Option 1: Create a Standard GKE Cluster (Most Skills Boost Labs)
+Open Cloud Shell.
+Set the project (replace with your lab project ID if needed):
+gcloud config set project PROJECT_ID
+
+Check it:
+
+gcloud config get-value project
+Set the compute zone (replace with the zone specified in your lab):
+gcloud config set compute/zone us-central1-a
+
+or
+
+gcloud config set compute/region us-central1
+Create the cluster:
+gcloud container clusters create my-cluster \
+    --num-nodes=3
+
+Example with a zone:
+
+gcloud container clusters create my-cluster \
+    --zone us-central1-a \
+    --num-nodes=3
+Get credentials:
+gcloud container clusters get-credentials my-cluster
+Verify:
+kubectl get nodes
+
+Expected output:
+
+NAME                                          STATUS   ROLES    AGE
+gke-my-cluster-default-pool-xxxxx             Ready    <none>   2m
+gke-my-cluster-default-pool-yyyyy             Ready    <none>   2m
+gke-my-cluster-default-pool-zzzzz             Ready    <none>   2m
+Option 2: Create an Autopilot Cluster
+
+Some newer Skills Boost labs require Autopilot.
+
+gcloud container clusters create-auto my-cluster \
+    --region us-central1
+
+Get credentials:
+
+gcloud container clusters get-credentials my-cluster \
+    --region us-central1
+Verify the Cluster
+kubectl cluster-info
+kubectl get nodes
+kubectl get pods -A
+List Existing Clusters
+gcloud container clusters list
+Delete the Cluster
+gcloud container clusters delete my-cluster --zone us-central1-a
+
+or for Autopilot:
+
+gcloud container clusters delete my-cluster --region us-central1
+If You Get Errors
+
+If you see:
+
+ERROR: (gcloud.container.clusters.create) ResponseError: code=403
+
+enable the API:
+
+gcloud services enable container.googleapis.com
+
+If you see:
+
+You do not currently have this command group installed
+
+install the component:
+
+gcloud components install gke-gcloud-auth-plugin
+
+If kubectl says:
+
+The connection to the server localhost:8080 was refused
+
+run:
+
+gcloud container clusters get-credentials my-cluster
+Typical Skills Boost Lab Command
+
+Many GKE labs use a command like:
+
+gcloud container clusters create lab-cluster \
+    --zone us-central1-a \
+    --machine-type=e2-medium \
+    --num-nodes=3
