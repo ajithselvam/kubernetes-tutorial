@@ -1,0 +1,51 @@
+Since you're using Google Kubernetes Engine (GKE), this error usually means your local kubectl is not configured with your GKE cluster credentials.
+
+Step 1: Make sure you're logged in to Google Cloud
+gcloud auth login
+
+Then verify the active account:
+
+gcloud auth list
+Step 2: Set the correct project
+
+List your projects:
+
+gcloud projects list
+
+Set the project containing your GKE cluster:
+
+gcloud config set project PROJECT_ID
+
+Replace PROJECT_ID with your Google Cloud project ID.
+
+Step 3: Find your GKE cluster
+
+List clusters:
+
+gcloud container clusters list
+
+You should see output similar to:
+
+NAME          LOCATION      MASTER_VERSION
+my-cluster    us-central1   1.31.x
+Step 4: Get cluster credentials
+
+Run:
+
+gcloud container clusters get-credentials CLUSTER_NAME --region REGION
+
+or, if it's a zonal cluster:
+
+gcloud container clusters get-credentials CLUSTER_NAME --zone ZONE
+
+For example:
+
+gcloud container clusters get-credentials my-cluster --region us-central1
+
+This updates your kubeconfig so kubectl knows how to reach the cluster.
+
+Step 5: Verify the connection
+
+Now run:
+
+kubectl get nodes
