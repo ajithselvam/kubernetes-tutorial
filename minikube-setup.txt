@@ -1,0 +1,21 @@
+Step 1: Install Minikube
+Run these two commands to download and install the latest version of Minikube:
+Bash
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+(You can clean up the installer file afterwards with rm minikube-linux-amd64)  
+Minikube - Kubernetes
+Step 2: Ensure Docker permissions are set
+Minikube will use Docker to run the Kubernetes cluster inside a container. Make sure your current user can run Docker commands without typing sudo:  
+Spacelift
+Bash
+sudo usermod -aG docker $USER && newgrp docker
+Step 3: Start your Cluster
+Now, kickstart your single-node Kubernetes cluster:
+Bash
+minikube start --driver=docker
+Give it a couple of minutes to download the base image and bootstrap the control plane.
+Step 4: Verify it Works
+Since you already have your k alias set up for kubectl, you can instantly check if your cluster is alive and kicking:
+Bash
+k get nodes
