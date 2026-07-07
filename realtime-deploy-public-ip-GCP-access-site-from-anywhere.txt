@@ -1,0 +1,72 @@
+Since you don't have a domain name right now, the most standard production-style approach on Google Cloud Platform (GCP) is to use a Layer 4 Network Load Balancer. GCP will instantly provisioning a real, stable public IP address for you, and you can access Jenkins directly via http://<YOUR_GCP_PUBLIC_IP>:8080 without needing a domain name or a complex Ingress setup.
+Here is the full guide to setting this up step-by-step in Google Kubernetes Engine (GKE).
+Step 1: Update Your Service YAML
+We will change the service type from NodePort to LoadBalancer. When GKE reads this manifest, it reaches out to Google Cloud and automatically spins up an external Cloud Load Balancer.
+Save this updated code as jenkins-service.yaml:
+
+YAML
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenk
+  namespace: default
+spec:
+  type: LoadBalancer
+  selector:
+    app: jenk
+  ports:
+    - name: http
+      port: 8080       # This is the external port you will type into your browser
+      targetPort: 8080 # This matches your Jenkins container port
+      protocol: TCP
+    - name: agent
+      port: 50000      # Kept for Jenkins agents to connect internally/externally
+      targetPort: 50000
+
+
+Step 2: Apply the Changes to GKE
+Run the standard kubectl command to apply the new configuration over your existing service:
+
+Bash
+kubectl apply -f jenkins-service.yaml
+
+
+Step 3: Retrieve Your New GCP Public IP
+Google Cloud takes about 1 to 2 minutes to provision the infrastructure and assign an external IP. Run the following command to track its progress:
+
+Bash
+kubectl get svc jenk --watch
+Initially, the EXTERNAL-IP column will show <pending>. After a minute or two, it will update to a real public IP address:
+Plaintext
+NAME   TYPE           CLUSTER-IP    EXTERNAL-IP     PORT(S)                         AGE
+jenk   LoadBalancer   10.48.2.14    35.240.12.156   8080:31254/TCP,50000:32411/TCP  5m
+(Press Ctrl + C to exit the watch mode once you see the IP).
+
+
+Step 4: Access Jenkins
+Now that GCP has provisioned a public IP for you, any machine outside your network can access Jenkins.
+Open your browser and navigate to:
+http://35.240.12.156:8080 (replace 35.240.12.156 with your actual external IP).
+💡 Pro-Tip: Making the IP Permanent (Optional)
+By default, the IP address GCP assigns to a LoadBalancer service is ephemeral (it might change if you delete and recreate the Kubernetes service). If you plan to keep this running, it’s best to tell GCP to make that IP static so it never changes.
+Run this command to reserve a static IP in the same region as your GKE cluster:
+
+Bash
+gcloud compute addresses create jenkins-static-ip --region=YOUR_CLUSTER_REGION
+Find the IP address that was reserved:
+
+Bash
+gcloud compute addresses describe jenkins-static-ip --region=YOUR_CLUSTER_REGION --format="value(address)"
+Update your jenkins-service.yaml one last time by adding loadBalancerIP to lock it in:
+
+YAML
+spec:
+  type: LoadBalancer
+  loadBalancerIP: "YOUR_RESERVED_IP_HERE"
+  selector:
+    app: jenk
+  # ... rest of your file
+
+
+
+
