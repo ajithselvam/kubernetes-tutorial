@@ -1,0 +1,296 @@
+To take this Kubernetes YAML from a basic template to a robust, production-ready manifest for your Google Kubernetes Engine (GKE) cluster (ajith-cluster), we need to address a few critical production gaps:
+Security & Least Privilege: Running containers as root is a major production risk. We need a securityContext.
+Availability & Reliability: Your current resource limits (20m CPU, 20Mi memory) are incredibly low and will likely cause immediate OOM (Out Of Memory) kills or CPU throttling for almost any standard application. We also need Liveness and Readiness probes so Kubernetes knows if your app crashes or isn't ready to take traffic.
+GCP Native Integration: For a production LoadBalancer service in GKE, it's best practice to secure it with a static IP and restrict external traffic using GCP-specific annotations.
+Here is the fully upgraded, production-grade YAML manifest.
+
+YAML
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signal
+  namespace: default
+  labels:
+    app.kubernetes.io/name: signal
+    app.kubernetes.io/instance: signal-prod
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/managed-by: helm # Or manual/kubectl if not using a tool
+spec:
+  replicas: 3 # Production standard: minimum 3 replicas for high availability across zones
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: signal
+  template:
+    metadata:
+      labels:
+        app: signal
+    spec:
+      # Pod-level security hardening
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: signal
+          image: ajith567890/ajith567890/signalatlas:version8
+          imagePullPolicy: IfNotPresent
+          
+          # Container-level security hardening
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false # Set to true if your app doesn't write to local disk
+
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+
+          # Health Checks (Adjust path/initialDelay based on your application)
+          readinessProbe:
+            httpGet:
+              path: / # Change to your app's health/ready endpoint
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: / # Change to your app's health/live endpoint
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+
+          # Realistic production resource baselines (adjust based on load testing)
+          resources:
+            requests:
+              cpu: "100m"     # 0.1 Core
+              memory: "128Mi"
+            limits:
+              cpu: "500m"     # 0.5 Core
+              memory: "256Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: signal
+  namespace: default
+  labels:
+    app.kubernetes.io/name: signal
+  annotations:
+    # GKE Specific Production Annotations
+    # cloud.google.com/load-balancer-type: "Internal" # Uncomment if this shouldn't be public
+    networking.gke.io/load-balancer-type: "External" 
+    # kubernetes.io/ingress.global-static-ip-name: "your-reserved-gcp-static-ip" # Highly recommended for prod
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local # Preserves client source IP and reduces cross-node hops
+  selector:
+    app: signal
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+Key Production Enhancements Explained
+High Availability (replicas: 3 & RollingUpdate): Running a single replica is a single point of failure. Setting this to 3 ensures GKE distributes your pods across multiple Compute Engine zones. The RollingUpdate strategy guarantees zero-downtime deployments.
+Security Context (Non-Root): Containers by default run as root. The added securityContext forces the container to run as a non-privileged user (10001) and drops all Linux kernel capabilities (drop: - ALL), preventing potential container-escape vulnerabilities.
+Probes (Liveness/Readiness): Without these, if your app deadlocks or enters a broken state but the process doesn't exit, Kubernetes will still send users to it. These ensure traffic only hits healthy pods.
+Upgraded Resources: Bumped CPU from 10m to 100m and memory from 10Mi to 128Mi. 10Mi is almost instantly going to crash a modern app framework during initialization.
+externalTrafficPolicy: Local: On GCP, this forces the load balancer to route traffic directly to nodes that are actually running your pod, preserving the original client IP addresses for your application logs.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+To map your domain ajith.signal.com to your application on GKE, using a standard Service type LoadBalancer isn't ideal for production. Instead, the production standard on Google Cloud is to use a GKE Ingress (managed by Google Cloud HTTP(S) Load Balancing) paired with Google-managed SSL certificates.
+This gives you free, auto-renewing SSL/TLS certificates and optimizes global routing.
+Here is the complete, production-grade manifest featuring the Deployment, a modified NodePort Service (required for Ingress), a Managed Certificate, and the Ingress controller.
+
+
+
+YAML
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signal
+  namespace: default
+  labels:
+    app.kubernetes.io/name: signal
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: signal
+  template:
+    metadata:
+      labels:
+        app: signal
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: signal
+          image: ajith567890/ajith567890/signalatlas:version8
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: / 
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: / 
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+
+---
+# Production Note: For GKE Ingress, backend services should be Type: NodePort
+apiVersion: v1
+kind: Service
+metadata:
+  name: signal-service
+  namespace: default
+  labels:
+    app.kubernetes.io/name: signal
+spec:
+  type: NodePort
+  selector:
+    app: signal
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+
+---
+# 1. Google-Managed SSL Certificate for your domain
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: signal-ssl-cert
+  namespace: default
+spec:
+  domains:
+    - ajith.signal.com
+
+---
+# 2. Production GKE Ingress (Cloud Load Balancer)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: signal-ingress
+  namespace: default
+  annotations:
+    # Tells GKE to provision a global external HTTP(S) load balancer
+    kubernetes.io/ingress.class: "gce"
+    # Links the Google-managed SSL certificate created above
+    networking.gke.io/managed-certificates: "signal-ssl-cert"
+    # Optional: Forces HTTP traffic to redirect to HTTPS automatically
+    kubernetes.io/ingress.allow-http: "false"
+spec:
+  defaultBackend:
+    service:
+      name: signal-service
+      port:
+        name: http
+  rules:
+    - host: ajith.signal.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: signal-service
+                port:
+                  name: http
+
+
+
+
+
+🚀 Production Setup Steps (Crucial)
+To make your domain ajith.signal.com actually route traffic to your GKE cluster ajith-cluster, you need to tie this configuration to a Static External IP address in GCP:
+Reserve a Global Static IP in your GCP Project:
+Run this in your gcloud CLI:
+Bash
+gcloud compute addresses create signal-static-ip --global
+Find the IP address created:
+Bash
+gcloud compute addresses describe signal-static-ip --global --format="value(address)"
+Update your DNS:
+Go to your domain provider (where signal.com is hosted) and create an A Record for ajith.signal.com pointing to the IP address you fetched in Step 2.
+Link the IP to your Ingress:
+Add this annotation to the metadata.annotations section of the Ingress block in the YAML above before applying:
+YAML
+kubernetes.io/ingress.global-static-ip-name: "signal-static-ip"
+⚠️ Note on SSL Activation: Once you apply this manifest, Google will attempt to verify your domain. It can take anywhere from 30 minutes to a couple of hours for the Google-managed certificate status to switch from Provisioning to Active. Your DNS must point to the static IP for this process to succeed.
