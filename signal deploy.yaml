@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signal
+  namespace: default
+  labels:
+    app.kubernetes.io/name: signal
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: signal
+  template:
+    metadata:
+      labels:
+        app: signal
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: signal
+          image: ajith567890/ajith567890/signalatlas:version8
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: / 
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: / 
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "128Mi"
+            limits:
+              cpu: "30m"
+              memory: "256Mi"
+
+---
+# Production Note: For GKE Ingress, backend services should be Type: NodePort
+apiVersion: v1
+kind: Service
+metadata:
+  name: signal-service
+  namespace: default
+  labels:
+    app.kubernetes.io/name: signal
+spec:
+  type: NodePort
+  selector:
+    app: signal
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+
+---
+# 1. Google-Managed SSL Certificate for your domain
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: signal-ssl-cert
+  namespace: default
+spec:
+  domains:
+    - ajith.signal.com
+
+---
+# 2. Production GKE Ingress (Cloud Load Balancer)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: signal-ingress
+  namespace: default
+  annotations:
+    # Tells GKE to provision a global external HTTP(S) load balancer
+    kubernetes.io/ingress.class: "gce"
+    # Links the Google-managed SSL certificate created above
+    networking.gke.io/managed-certificates: "signal-ssl-cert"
+    # Optional: Forces HTTP traffic to redirect to HTTPS automatically
+    kubernetes.io/ingress.allow-http: "false"
+spec:
+  defaultBackend:
+    service:
+      name: signal-service
+      port:
+        name: http
+  rules:
+    - host: ajith.signal.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: signal-service
+                port:
+                  name: http
