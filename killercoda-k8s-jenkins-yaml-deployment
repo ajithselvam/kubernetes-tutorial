@@ -1,0 +1,87 @@
+
+
+Jenkinsfile
+
+
+pipeline {
+    agent any
+    
+    environment {
+        KUBE_CREDENTIAL_ID = 'k8s'
+    }
+    
+    stages{
+        stage('version'){
+            steps{
+                withKubeConfig([credentialsId: "${KUBE_CREDENTIAL_ID}"]) {
+                sh '''
+                kubectl version --client -o yaml
+                sleep 5
+                cd /var/lib/jenkins/sso/
+                kubectl create -f sso.yaml
+                kubectl get pods --watch
+                sleep 1m
+                kubectl get deploy
+                kubectl get service
+                kubectl get pods
+                '''
+            }
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+install jenkins on a linux vm
+
+make add jenkins user admin sudo docker root groups
+
+install plugins in jenkins
+kube all
+stages
+create kubeconfig in jenkins user 
+
+cmd
+
+mkdir -p ~/.kube
+   15  sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
+   16  exit
+   17  sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
+   18  sudo chown $(id -u):$(id -g) ~/.kube/config
+
+
+
+
+in root user
+
+1  sudo apt update && sudo apt install fontconfig openjdk-21-jre
+    2  sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc   https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+    3  echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]"   https://pkg.jenkins.io/debian-stable binary/ | sudo tee   /etc/apt/sources.list.d/jenkins.list > /dev/null
+    4  echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]"   https://pkg.jenkins.io/debian-stable binary/ | sudo tee   /etc/apt/sources.list.d/jenkins.list > /dev/null
+    5  sudo apt update && sudo apt install jenkins
+    6  usermod -aG sudo jenkins
+    7  usermod -aG admin jenkins
+    8  usermod -aG root jenkins
+    9  usermod -aG docker jenkins
+   10  syatemctl status jenkins
+   11  systemctl status jenkins
+   12  cat systemctl jenkins
+   13  systemctl cat jenkins
+   14  cat /var/lib/jenkins/secrets/initialAdminPassword 
+   15  cat ~/.kube/config 
+
+
+
+
+
+
+create credentials as secretfile in jenkins
+
+
