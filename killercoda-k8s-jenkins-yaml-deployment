@@ -41,6 +41,21 @@ pipeline {
 
 install jenkins on a linux vm
 
+
+
+
+sudo apt update &&
+sudo apt install fontconfig openjdk-21-jre && sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null && sudo apt update &&
+sudo apt install jenkins
+
+
+
+
+
 make add jenkins user admin sudo docker root groups
 
 install plugins in jenkins
