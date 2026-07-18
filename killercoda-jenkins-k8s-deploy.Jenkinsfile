@@ -21,7 +21,18 @@ pipeline {
                 kubectl expose pod nginx --type=NodePort --port=80 || true
                 sleep 3
                 kubectl get pods nginx -o wide
-                sleep 1
+                sleep 5
+                kubectl delete deploy nginx1 --ignore-not-found
+                sleep 5
+                kubectl create deploy nginx1 --image=nginx 
+                sleep 5
+                kubectl expose deploy nginx1 --type=NodePort --port=80 || true
+                sleep 5
+                kubectl get deploy nginx1 -o wide
+                sleep 5
+                kubectl get events --sort-by=.lastTimestamp
+                sleep 5
+                
                 '''
             }}
         }
