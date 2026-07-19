@@ -18,6 +18,8 @@ pipeline {
                 sleep 10
                 kubectl run nginx --image=nginx 
                 sleep 10
+                kubectl delete svc nginx --ignore-not-found
+                sleep 10
                 kubectl expose pod nginx --type=NodePort --port=80 || true
                 sleep 3
                 kubectl get pods nginx -o wide
@@ -26,6 +28,8 @@ pipeline {
                 sleep 5
                 kubectl create deploy nginx1 --image=nginx 
                 sleep 5
+                kubectl delete svc nginx1 --ignore-not-found
+                sleep 10
                 kubectl expose deploy nginx1 --type=NodePort --port=80 || true
                 sleep 5
                 kubectl get deploy nginx1 -o wide
