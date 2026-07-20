@@ -65,11 +65,11 @@ create kubeconfig in jenkins user
 
 cmd
 
-mkdir -p ~/.kube
-   15  sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
-   16  exit
-   17  sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
-   18  sudo chown $(id -u):$(id -g) ~/.kube/config
+mkdir -p ~/.kube &&  sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config && sudo chown $(id -u):$(id -g) ~/.kube/config
+   
+   
+    sudo cp -i /etc/kubernetes/admin.conf ~/.kube/config
+     sudo chown $(id -u):$(id -g) ~/.kube/config
 
 
 
