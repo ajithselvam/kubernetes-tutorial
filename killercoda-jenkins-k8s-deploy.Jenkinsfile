@@ -34,8 +34,9 @@ pipeline {
                 sleep 5
                 kubectl get deploy nginx1 -o wide
                 sleep 5
-                kubectl get events --sort-by=.lastTimestamp
+                kubectl get events --sort-by=.lastTimestamp 
                 sleep 5
+                kubectl get pods -A | grep -E -i 'crash|error|image|0/' || true
                 
                 '''
             }}
