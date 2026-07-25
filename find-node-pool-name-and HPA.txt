@@ -1,0 +1,179 @@
+1. How to Find the Node Pool Name
+Method 1 (Recommended)
+
+List all node pools in your cluster:
+
+gcloud container node-pools list \
+    --cluster=CLUSTER_NAME \
+    --region=REGION
+
+Example:
+
+gcloud container node-pools list \
+    --cluster=my-gke-cluster \
+    --region=asia-south1
+
+Output:
+
+NAME              MACHINE_TYPE   DISK_SIZE_GB  NODE_VERSION
+default-pool      e2-standard-2  100           1.33.2-gke
+highmem-pool      e2-highmem-4   100           1.33.2-gke
+
+Here the node pool names are:
+
+default-pool
+highmem-pool
+Method 2
+
+Describe the cluster:
+
+gcloud container clusters describe CLUSTER_NAME \
+    --region=REGION
+
+Look for:
+
+nodePools:
+- name: default-pool
+Method 3 (From Kubernetes)
+
+List nodes:
+
+kubectl get nodes --show-labels
+
+You'll see labels similar to:
+
+cloud.google.com/gke-nodepool=default-pool
+
+or
+
+kubectl get nodes \
+-L cloud.google.com/gke-nodepool
+
+Example:
+
+NAME           STATUS   NODEPOOL
+gke-node-1     Ready    default-pool
+gke-node-2     Ready    default-pool
+
+This is often the quickest method if you're already using kubectl.
+
+2. How to Enable Horizontal Pod Autoscaler (HPA)
+
+Before creating an HPA, ensure your deployment has CPU and/or memory requests defined.
+
+Example deployment:
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "1Gi"
+
+Without resource requests, CPU-based HPA won't work correctly.
+
+Step 1: Verify Metrics Server
+
+Check that the metrics API is available:
+
+kubectl top nodes
+kubectl top pods
+
+If these commands return metrics, you're ready. On GKE, the metrics server is typically installed by default.
+
+Step 2: Create an HPA
+
+Example:
+
+kubectl autoscale deployment payment-api \
+    --cpu-percent=70 \
+    --min=2 \
+    --max=10
+
+This means:
+
+Scale up when average CPU usage exceeds 70% of the requested CPU.
+Keep at least 2 replicas.
+Allow up to 10 replicas.
+Step 3: Verify the HPA
+kubectl get hpa
+
+Example output:
+
+NAME          REFERENCE                  TARGETS   MINPODS   MAXPODS   REPLICAS
+payment-api   Deployment/payment-api     45%/70%   2         10        2
+
+For more details:
+
+kubectl describe hpa payment-api
+Step 4: YAML Example
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-api
+
+  minReplicas: 2
+  maxReplicas: 10
+
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+
+Apply it:
+
+kubectl apply -f hpa.yaml
+Check Scaling in Real Time
+
+Watch the HPA status:
+
+kubectl get hpa -w
+
+Watch pods:
+
+kubectl get pods -w
+
+You'll see new pods created automatically when the CPU target is exceeded.
+
+Bonus: Enable Cluster Autoscaler
+
+HPA adds or removes pods. If there isn't enough capacity on your nodes, you also need the Cluster Autoscaler, which adds or removes nodes.
+
+Check if autoscaling is enabled:
+
+gcloud container node-pools describe NODE_POOL_NAME \
+    --cluster=CLUSTER_NAME \
+    --region=REGION
+
+Look for:
+
+autoscaling:
+  enabled: true
+  minNodeCount: 1
+  maxNodeCount: 5
+
+If it's disabled, enable it:
+
+gcloud container node-pools update NODE_POOL_NAME \
+    --cluster=CLUSTER_NAME \
+    --region=REGION \
+    --enable-autoscaling \
+    --min-nodes=1 \
+    --max-nodes=5
+HPA vs. Cluster Autoscaler
+Feature	HPA	Cluster Autoscaler
+Scales	Pods	Nodes
+Trigger	CPU/Memory/custom metrics	Pending pods due to insufficient resources
+Command	kubectl autoscale or HPA YAML	gcloud container node-pools update --enable-autoscaling
+Typical use	Handle increased application load	Provide additional cluster capacity when existing nodes are full
+
+Using HPA together with Cluster Autoscaler is the standard production setup on GKE. HPA increases the number of pods as demand rises, and if those pods can't be scheduled because the cluster is out of resources, the Cluster Autoscaler provisions additional nodes automatically.
