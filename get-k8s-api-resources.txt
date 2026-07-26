@@ -1,0 +1,10 @@
+
+
+
+kubectl api-resources | grep -i deployment
+
+
+kubectl explain deployment
+
+
+kubectl api-versions
