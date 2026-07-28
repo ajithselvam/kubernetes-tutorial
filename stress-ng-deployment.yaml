@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stress-ng
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: stress-ng
+  template:
+    metadata:
+      labels:
+        app: stress-ng
+    spec:
+      containers:
+      - name: stress-ng
+        image: myrepo/nginx-stress:1.0
+        command:
+        - stress-ng
+        args:
+        - "--cpu"
+        - "5"
+        - "--vm"
+        - "5"
+        - "--vm-bytes"
+        - "100M"
+        - "--timeout"
+        - "10m"
+        resources:
+          requests:
+            cpu: "5"
+            memory: "600Mi"
+          limits:
+            cpu: "5"
+            memory: "600Mi"
