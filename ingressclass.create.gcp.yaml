@@ -1,0 +1,76 @@
+If you are using GKE (GCE Ingress)
+
+Create an IngressClass for GCE:
+
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: gce
+spec:
+  controller: k8s.io/ingress-gce
+
+Apply:
+
+kubectl apply -f gce-ingressclass.yaml
+
+Then reference it in your Ingress:
+
+spec:
+  ingressClassName: gce
+
+Example:
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-app
+spec:
+  ingressClassName: gce
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: my-service
+            port:
+              number: 80
+Or make GCE the default
+
+If you want Ingress resources without ingressClassName to automatically use GCE, mark it as default:
+
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: gce
+  annotations:
+    ingressclass.kubernetes.io/is-default-class: "true"
+spec:
+  controller: k8s.io/ingress-gce
+
+Then this works:
+
+spec:
+  rules:
+  - host: example.com
+
+because Kubernetes will automatically assign:
+
+ingressClassName: gce
+Verify the GCE controller exists
+
+On GKE, check:
+
+kubectl get pods -n kube-system | grep ingress
+
+You should see the GCE ingress controller components managed by GKE.
+
+Also check your cluster type:
+
+kubectl cluster-info
+
+or:
+
+kubectl get nodes -o wide
