@@ -1,0 +1,239 @@
+1. NGINX Ingress Controller annotations
+
+Prefix:
+
+nginx.ingress.kubernetes.io/
+Routing / Rewrite
+Rewrite URL path
+nginx.ingress.kubernetes.io/rewrite-target: /
+
+Example:
+
+/api/login  →  /
+Use regex paths
+nginx.ingress.kubernetes.io/use-regex: "true"
+App root redirect
+nginx.ingress.kubernetes.io/app-root: /login.html
+
+Example:
+
+/
+↓
+/login.html
+2. SSL / TLS
+Redirect HTTP → HTTPS
+nginx.ingress.kubernetes.io/ssl-redirect: "true"
+Force SSL redirect
+nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+Backend HTTPS
+nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+3. Proxy settings
+Client upload size
+nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+Connection timeout
+nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+Read timeout
+nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+Send timeout
+nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+Buffer size
+nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+4. Rate limiting
+Requests per second
+nginx.ingress.kubernetes.io/limit-rps: "10"
+Requests per minute
+nginx.ingress.kubernetes.io/limit-rpm: "100"
+Connection limit
+nginx.ingress.kubernetes.io/limit-connections: "5"
+5. CORS
+
+Enable CORS:
+
+nginx.ingress.kubernetes.io/enable-cors: "true"
+
+Allow origin:
+
+nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+
+Allow methods:
+
+nginx.ingress.kubernetes.io/cors-allow-methods: "GET, PUT, POST, OPTIONS"
+
+Allow headers:
+
+nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type"
+6. Authentication
+Basic authentication
+nginx.ingress.kubernetes.io/auth-type: basic
+
+Secret:
+
+nginx.ingress.kubernetes.io/auth-secret: auth-secret
+
+Realm:
+
+nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+7. Headers
+
+Add custom headers:
+
+nginx.ingress.kubernetes.io/configuration-snippet: |
+  add_header X-Frame-Options DENY;
+8. Session affinity
+
+Cookie based:
+
+nginx.ingress.kubernetes.io/affinity: cookie
+
+Cookie name:
+
+nginx.ingress.kubernetes.io/session-cookie-name: route
+9. Canary deployments
+
+Enable canary:
+
+nginx.ingress.kubernetes.io/canary: "true"
+
+Traffic percentage:
+
+nginx.ingress.kubernetes.io/canary-weight: "20"
+10. Load balancing
+
+Choose algorithm:
+
+nginx.ingress.kubernetes.io/load-balance: ewma
+
+Examples:
+
+round_robin
+ewma
+<br>
+GCE / GKE Ingress annotations
+
+Prefix:
+
+kubernetes.io/
+
+or:
+
+networking.gke.io/
+1. Static IP
+
+Use reserved IP:
+
+kubernetes.io/ingress.global-static-ip-name: my-static-ip
+
+Example:
+
+annotations:
+  kubernetes.io/ingress.global-static-ip-name: ajith-ip
+2. Managed SSL Certificate
+
+Attach certificate:
+
+networking.gke.io/managed-certificates: certificate-name
+
+Example:
+
+annotations:
+  networking.gke.io/managed-certificates: ajith-cert
+3. Allow HTTP
+
+Enable HTTP:
+
+kubernetes.io/ingress.allow-http: "true"
+
+Disable HTTP:
+
+kubernetes.io/ingress.allow-http: "false"
+4. Backend configuration
+
+Attach BackendConfig:
+
+beta.cloud.google.com/backend-config: '{"default":"backend-config"}'
+
+or newer:
+
+cloud.google.com/backend-config: '{"default":"backend-config"}'
+5. Frontend configuration
+
+Attach FrontendConfig:
+
+networking.gke.io/v1beta1.FrontendConfig
+
+Example:
+
+networking.gke.io/frontend-config: frontend-config-name
+
+Used for:
+
+HTTPS redirects
+SSL policies
+security headers
+6. Ingress class
+
+Old style:
+
+kubernetes.io/ingress.class: gce
+
+New style:
+
+spec:
+  ingressClassName: gce
+7. Internal Load Balancer
+
+Use:
+
+kubernetes.io/ingress.class: gce-internal
+
+or:
+
+spec:
+  ingressClassName: gce-internal
+8. Cloud Armor security policy
+
+Through BackendConfig:
+
+securityPolicy:
+  name: my-cloud-armor-policy
+9. Cloud CDN
+
+Through BackendConfig:
+
+cdn:
+  enabled: true
+Comparison
+Feature	NGINX	GCE
+Path rewrite	✅ Excellent	Limited
+Rate limiting	✅ Built-in	Cloud Armor
+Custom headers	✅ Easy	FrontendConfig
+TLS termination	✅	✅ Managed cert
+CDN	External	Cloud CDN
+WAF	ModSecurity	Cloud Armor
+Internal LB	Custom	Native
+Static IP	External LB config	Native
+Canary	✅ Easy	Limited
+WebSockets	✅	✅
+Advanced routing	✅	Limited
+
+For your current project (ajith.run.place/login.html):
+
+Simple website:
+
+GKE Ingress (gce)
++
+ManagedCertificate later
++
+BackendConfig if needed
+
+Application/API platform:
+
+NGINX Ingress
++
+cert-manager
++
+external-dns
++
+Cloud Armor/WAF
+
+Most companies running Kubernetes applications choose the second pattern when they need more control.
