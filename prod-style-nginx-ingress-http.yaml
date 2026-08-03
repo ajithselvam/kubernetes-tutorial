@@ -1,0 +1,37 @@
+# nginx-ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: signal-ingress
+  namespace: default
+
+  annotations:
+    # Redirect HTTP to HTTPS (enable when TLS is configured)
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+
+    # Maximum client upload size
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # Timeouts for backend communication
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+
+spec:
+  ingressClassName: nginx
+
+  rules:
+    - host: ajith.run.place
+      http:
+        paths:
+
+          # Application traffic
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: signal-service
+                port:
+                  number: 80
