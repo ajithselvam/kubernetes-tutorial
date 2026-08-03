@@ -1,0 +1,86 @@
+First check whether NGINX Ingress Controller is installed:
+
+kubectl get pods -A | grep ingress-nginx
+
+If you see something like:
+
+ingress-nginx-controller-xxxxx   Running
+
+then create an IngressClass.
+
+1. Create nginx IngressClass
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: nginx
+spec:
+  controller: k8s.io/ingress-nginx
+
+Apply:
+
+kubectl apply -f nginx-ingressclass.yaml
+
+Verify:
+
+kubectl get ingressclass
+
+Expected:
+
+NAME    CONTROLLER
+nginx   k8s.io/ingress-nginx
+2. Use it in your Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-app
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: my-service
+            port:
+              number: 80
+
+Now the NGINX controller will process this Ingress.
+
+3. Or make nginx the default
+
+If you don't want to write:
+
+ingressClassName: nginx
+
+every time:
+
+kubectl annotate ingressclass nginx \
+  ingressclass.kubernetes.io/is-default-class=true
+
+Then any Ingress without ingressClassName will use NGINX.
+
+If kubectl get ingressclass shows nothing and NGINX is not installed
+
+Install NGINX Ingress Controller first. For example with Helm:
+
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+
+helm repo update
+
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace
+
+The Helm chart normally creates the IngressClass automatically.
+
+Check:
+
+kubectl get ingressclass
+
+You should then see:
+
+NAME    CONTROLLER
+nginx   k8s.io/ingress-nginx
