@@ -1,0 +1,65 @@
+ # Allows Kubernetes to know when your application has started successfully
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: http
+
+          failureThreshold: 30
+          # Number of failed checks allowed before startup fails
+          # 30 failures × 10 seconds = 5 minutes maximum startup time
+
+          periodSeconds: 10
+          # Check every 10 seconds
+
+          timeoutSeconds: 5
+          # Wait maximum 5 seconds for each health response
+
+
+        # Checks if the application is alive
+        # If this fails repeatedly, Kubernetes restarts the container
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: http
+
+          initialDelaySeconds: 0
+          # Wait before starting liveness checks
+          # Keep 0 when startupProbe exists
+
+          periodSeconds: 10
+          # Check application every 10 seconds
+
+          timeoutSeconds: 5
+          # If health endpoint does not respond within 5 seconds, it is a failure
+
+          failureThreshold: 3
+          # Number of failed checks before restart
+          # 3 failures × 10 seconds = about 30 seconds before restart
+
+          successThreshold: 1
+          # Number of successful checks needed to mark healthy
+
+
+        # Checks if the application is ready to receive traffic
+        # Failed readiness does NOT restart the pod
+        # It only removes the pod from Service traffic
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+
+          initialDelaySeconds: 5
+          # Give the application 5 seconds before checking readiness
+
+          periodSeconds: 5
+          # Check every 5 seconds
+
+          timeoutSeconds: 3
+          # Wait 3 seconds for response
+
+          failureThreshold: 3
+          # 3 failures × 5 seconds = about 15 seconds
+          # Pod stops receiving traffic after this
+
+          successThreshold: 1
+          # One successful check makes pod ready
