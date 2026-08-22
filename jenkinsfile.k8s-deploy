@@ -1,0 +1,38 @@
+pipeline {
+    agent any
+    
+    environment{
+        KUBE_CREDENTIAL_ID = 'k8s'
+    }
+    
+    stages{
+        stage('version to deploy'){
+            steps{
+                withKubeConfig([credentialsId: "${KUBE_CREDENTIAL_ID}"]){
+                sh '''
+                kubectl get nodes
+                kubectl get nodes -o wide
+                kubectl get events
+                kubectl get pods -A | grep -E -i "crash|image|error" || true
+                kubectl delete pod nginx --ignore-not-found
+                kubectl run nginx --image=nginx
+                kubectl delete deploy nginx1 --ignore-not-found
+                kubectl create deploy nginx1 --image=nginx
+                if kubectl get svc nginx >/dev/null 2>&1; then
+                echo "already exist" 
+                else
+                kubectl expose pod nginx --type=NodePort --port=30080
+                fi
+                
+                if kubectl get svc nginx1 >/dev/null 2>&1; then
+                echo  "already exist"
+                else
+                kubectl expose deploy nginx1 --type=NodePort --port=30090
+                fi
+                kubectl get svc
+                '''
+                
+            }
+        }
+    }}
+}
